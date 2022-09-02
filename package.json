@@ -1,0 +1,22 @@
+{
+  "name": "cloudcord",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/client.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sueqkjs/cloudcord.git"
+  },
+  "author": "Sueqkjs",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/Sueqkjs/cloudcord/issues"
+  },
+  "homepage": "https://github.com/Sueqkjs/cloudcord#readme",
+  "dependencies": {
+    "discord-api-types": "^0.37.5"
+  }
+}
