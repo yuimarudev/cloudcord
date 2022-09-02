@@ -164,8 +164,8 @@ export default class<T extends Env, C> {
   error(
     command: string,
     error: string,
-    raw: C,
-    locale?: keyof C,
+    raw: C & {en: any},
+    locale?: keyof typeof raw
   ): FormData {
     return this.reply({
       content: this.format(raw[locale || "en"][command].error!, error),
@@ -185,11 +185,11 @@ export default class<T extends Env, C> {
   }
 
   format(...r: string[]): string {
-  return r.reduce(
-    (a, c, i) => a?.replace(new RegExp(`\\{${i}\\}`, "g"), c),
-    r.shift()
-  ) as string;
-}
+    return r.reduce(
+      (a, c, i) => a?.replace(new RegExp(`\\{${i}\\}`, "g"), c),
+      r.shift()
+    ) as string;
+  }
 }
 
 export interface ICommands {
