@@ -7,17 +7,18 @@ import {
   InteractionType,
   APIPingInteraction,
 } from "discord-api-types/v10";
-import { format, raw } from "../../config";
 import { verify } from "./verify";
 
-export default class<T extends Env> {
+export default class<T extends Env, C> {
   commands: ICommands;
   env: T;
   clientId: string;
-  constructor(env: T) {
+  config: C;
+  constructor(env: T, config: C) {
     this.commands = {};
     this.env = env;
     this.clientId = atob(env.token.split(".")[0]);
+    this.config = config;
   }
 
   async request(request: Request): Promise<Response> {
@@ -161,17 +162,18 @@ export default class<T extends Env> {
   }
 
   error(
-    command: keyof typeof raw.en,
+    command: string,
     error: string,
-    locale?: keyof typeof raw
+    raw: C,
+    locale?: keyof C,
   ): FormData {
     return this.reply({
-      content: format(raw[locale || "en"][command].error!, error),
+      content: this.format(raw[locale || "en"][command].error!, error),
       ephemeral: true,
     });
   }
 
-  toSupportedLocale(locale: LocaleString) {
+  toSupportedLocale(locale: LocaleString, raw: C) {
     let loc: string = locale;
     if (locale.startsWith("en-")) loc = "en";
     if (!Object.keys(raw).includes(loc)) return "en";
@@ -181,6 +183,13 @@ export default class<T extends Env> {
   respond(interaction: FormData): Response {
     return new Response(interaction);
   }
+
+  format(...r: string[]): string {
+  return r.reduce(
+    (a, c, i) => a?.replace(new RegExp(`\\{${i}\\}`, "g"), c),
+    r.shift()
+  ) as string;
+}
 }
 
 export interface ICommands {
