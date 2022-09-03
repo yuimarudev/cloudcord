@@ -18,6 +18,7 @@
   "homepage": "https://github.com/Sueqkjs/cloudcord#readme",
   "dependencies": {
     "@discordjs/builders": "^1.2.0",
+    "@discordjs/collection": "^1.1.0",
     "discord-api-types": "^0.37.5"
   }
 }

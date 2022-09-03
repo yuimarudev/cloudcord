@@ -9,7 +9,7 @@ import {
   APIApplicationCommandAutocompleteInteraction,
 } from "discord-api-types/v10";
 import { verify } from "./verify";
-import {} from "@discordjs/builders";
+import { Collection } from "@discordjs/collection";
 import {
   Command,
   Commands,
@@ -18,29 +18,34 @@ import {
   SlashCommandOption,
   UserOrMessageCommandOption,
 } from "./commands";
+import { Component, ComponentHandler, Components } from "./components";
 
 class Client<T extends Env, C extends object> {
   commands: Commands<T, C>;
   commandFunctions: ICommands;
+  components: Components<T, C>;
+  componentsFunction: Collection<ComponentHandler, Component>;
   env: T;
   clientId: string;
   config: C;
   constructor(env: T, config: C) {
     this.commandFunctions = {};
+    this.componentsFunction = new Collection();
     this.env = env;
     this.clientId = atob(env.token.split(".")[0]);
     this.config = config;
-    this.commands = new Commands(config, env.token, this.clientId, this);
+    this.commands = new Commands(env.token, this.clientId, this);
+    this.components = new Components(this);
   }
 
   command(args: SlashCommandOption | UserOrMessageCommandOption) {
-    let self = this;
+    const self = this;
     return function (
       _target: Object,
       name: string,
       descriptor: PropertyDescriptor
     ) {
-      let fn = descriptor.value as Command;
+      const fn = descriptor.value as Command;
       if (args.type === 2 || args.type === 3) {
         fn.type = args.type;
         fn.name_localizations = args.name_localizations;
@@ -54,7 +59,18 @@ class Client<T extends Env, C extends object> {
       }
     };
   }
-  
+
+  component(handler: ComponentHandler) {
+    const self = this;
+    return function (
+      _target: Object,
+      _name: string,
+      descriptor: PropertyDescriptor
+    ) {
+      self.componentsFunction.set(handler, descriptor.value as Component);
+    };
+  }
+
   async request(request: Request): Promise<Response> {
     if (
       !request.headers.get("X-Signature-Ed25519") ||
@@ -94,7 +110,9 @@ class Client<T extends Env, C extends object> {
           },
         });
       case InteractionType.MessageComponent:
-        switch (interaction.data.component_type) {
+        const component = this.componentsFunction.find((_, h) => h(interaction));
+        if (component) {
+          return respond(await component(interaction));
         }
       default:
         return respond(reply("hi"));
