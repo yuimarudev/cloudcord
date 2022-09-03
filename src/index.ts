@@ -1,7 +1,2 @@
-import Client from "./client";
-
-export {
-  Client
-}
-
 export * from "./client";
+export * from "./commands";
