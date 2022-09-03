@@ -6,10 +6,15 @@ import {
   APIAttachment,
   InteractionType,
   APIPingInteraction,
+  APIMessageComponentInteraction,
+  APIModalSubmitInteraction,
+  APIInteractionResponse,
+  APIApplicationCommandInteractionDataOption,
+  APIApplicationCommandAutocompleteInteraction,
 } from "discord-api-types/v10";
 import { verify } from "./verify";
 
-export default class<T extends Env, C> {
+export default class<T extends Env, C extends Record<LocaleString | "en", Record<string, CommandOption>>> {
   commands: ICommands;
   env: T;
   clientId: string;
@@ -30,20 +35,38 @@ export default class<T extends Env, C> {
       return new Response("", { status: 401 });
     const interaction = (await request.json()) as
       | APIPingInteraction
-      | APIApplicationCommandInteraction;
-    if (interaction.type === InteractionType.Ping) {
-      const form = new FormData();
-      form.append(
-        "payload_json",
-        JSON.stringify({
+      | APIApplicationCommandInteraction
+      | APIApplicationCommandAutocompleteInteraction
+      | APIMessageComponentInteraction
+      | APIModalSubmitInteraction;
+    switch (interaction.type) {
+      case InteractionType.Ping:
+        return this.respond({
           type: InteractionResponseType.Pong,
-        })
-      );
-      return this.respond(form);
+        });
+      case InteractionType.ApplicationCommand:
+        return this.respond(
+          await this.commands[interaction.data.name](interaction)
+        );
+      case InteractionType.ApplicationCommandAutocomplete:
+        let choices =
+          this.commands[interaction.data.name].options
+            ?.filter((x) =>
+              interaction.data.options.find(
+                (y) => x.name === y.name && x.type === y.type
+              )
+            )
+            .map((x) => x.autoComplete) || [];
+          // なぜかエラーが出ているが気にしないことにした。
+        return this.respond({
+          type: InteractionResponseType.ApplicationCommandAutocompleteResult,
+          data: {
+            choices,
+          },
+        });
+      default:
+        return this.respond(this.reply("hi"));
     }
-    return this.respond(
-      await this.commands[interaction.data.name](interaction)
-    );
   }
 
   command(args: SlashCommandOption | UserOrMessageCommandOption) {
@@ -164,7 +187,7 @@ export default class<T extends Env, C> {
   error(
     command: string,
     error: string,
-    raw: C & {en: any},
+    raw: C & { en: any },
     locale?: keyof typeof raw
   ): FormData {
     return this.reply({
@@ -180,8 +203,16 @@ export default class<T extends Env, C> {
     return loc as keyof typeof raw;
   }
 
-  respond(interaction: FormData): Response {
-    return new Response(interaction);
+  respond(interaction: FormData | APIInteractionResponse): Response {
+    let i: FormData;
+    if (!(interaction instanceof FormData)) {
+      let form = new FormData();
+      form.append("payload_json", JSON.stringify(interaction));
+      i = form;
+    } else {
+      i = interaction;
+    }
+    return new Response(i);
   }
 
   format(...r: string[]): string {
@@ -202,7 +233,9 @@ export interface CommandOption {
   description_localizations?: Record<string, string>;
   name_localizations?: Record<string, string>;
   name?: string;
-  options?: any[];
+  options?: ({
+    autoComplete: string | number;
+  } & APIApplicationCommandInteractionDataOption)[];
   error?: string;
 }
 
@@ -210,7 +243,9 @@ export interface SlashCommandOption extends CommandOption {
   type: 1;
   description: string;
   description_localizations: Record<string, string>;
-  options?: any[];
+  options?: ({
+    autoComplete: string | number;
+  } & APIApplicationCommandInteractionDataOption)[];
 }
 
 export interface UserOrMessageCommandOption extends CommandOption {
