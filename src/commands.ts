@@ -12,24 +12,18 @@ class Commands<T extends Env, C extends object> {
   token: string;
   clientId: string;
   client: Client<T, C>;
-  constructor(
-    token: string,
-    clientId: string,
-    client: Client<T, C>
-  ) {
+  constructor(token: string, clientId: string, client: Client<T, C>) {
     this.token = token;
     this.clientId = clientId;
     this.client = client;
   }
 
   async register() {
-    let i = Object.entries(this.client.commandFunctions).map(
-      ([name, command]) => {
-        return { name, ...command };
-      }
-    );
+    let i = this.client.commandFunctions.map((v, k) => {
+      return { name: k, ...v };
+    });
     return await fetch(
-      `https://discord.com/api/v9/applications/${this.clientId}/commands`,
+      `https://discord.com/api/v10/applications/${this.clientId}/commands`,
       {
         method: "PUT",
         headers: {
@@ -63,22 +57,9 @@ class Commands<T extends Env, C extends object> {
   }
 }
 
-export function reply(
-  data:
-    | APIInteractionResponseCallbackData & {
-        attachments?: (Pick<APIAttachment, "id" | "description"> &
-          Pick<APIAttachment, "filename"> & { data: Blob })[];
-      } & { ephemeral?: boolean; supppress_embeds?: boolean }
-): FormData;
+export function reply(data: CallbackData): FormData;
 export function reply(data: string): FormData;
-export function reply(
-  data:
-    | (APIInteractionResponseCallbackData & {
-        attachments?: (Pick<APIAttachment, "id" | "description"> &
-          Pick<APIAttachment, "filename"> & { data: Blob })[];
-      } & { ephemeral?: boolean; supppress_embeds?: boolean })
-    | string
-): FormData {
+export function reply(data: CallbackData | string): FormData {
   const form = new FormData();
   if (typeof data === "string") {
     form.append(
@@ -116,9 +97,10 @@ export function reply(
   return form;
 }
 
-export interface ICommands {
-  [key: string]: Command;
-}
+export type CallbackData = APIInteractionResponseCallbackData & {
+  attachments?: (Pick<APIAttachment, "id" | "description"> &
+    Pick<APIAttachment, "filename"> & { data: Blob })[];
+} & { ephemeral?: boolean; supppress_embeds?: boolean };
 
 export interface CommandOption {
   type: Number;
@@ -130,6 +112,7 @@ export interface CommandOption {
     autoComplete: string | number;
   } & APIApplicationCommandInteractionDataOption)[];
   error?: string;
+  default_member_permissions?: string;
 }
 
 export interface SlashCommandOption extends CommandOption {
@@ -139,6 +122,7 @@ export interface SlashCommandOption extends CommandOption {
   options?: ({
     autoComplete: string | number;
   } & APIApplicationCommandInteractionDataOption)[];
+  default_member_permissions?: string;
 }
 
 export interface UserOrMessageCommandOption extends CommandOption {
