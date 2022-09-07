@@ -3,6 +3,7 @@ Command framework for discord.js for Cloudflare Workers, working with HTTP inter
 
 ## Depended on
 - `@dicordjs/builders`
+- `@discordjs/collection`
 - `discord-api-types` (v10)
 
 ## Example
