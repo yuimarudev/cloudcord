@@ -30,6 +30,7 @@ class Client<T extends Env, C extends object> {
   env: T;
   clientId: string;
   config: C;
+  ignoreList: string[];
   constructor(env: T, config: C) {
     this.commandFunctions = new Collection();
     this.componentsFunction = new Collection();
@@ -38,6 +39,7 @@ class Client<T extends Env, C extends object> {
     this.config = config;
     this.commands = new Commands(env.token, this.clientId, this);
     this.components = new Components(this);
+    this.ignoreList = [];
   }
 
   command(args: SlashCommandOption | UserOrMessageCommandOption) {
@@ -56,7 +58,8 @@ class Client<T extends Env, C extends object> {
         self.commandFunctions.set(args.name, fn);
       } else if (args.type === 1) {
         if (args.options) fn.options = args.options;
-        if (args.default_member_permissions) fn.default_member_permissions = args.default_member_permissions;
+        if (args.default_member_permissions)
+          fn.default_member_permissions = args.default_member_permissions;
         fn.type = 1;
         fn.description = args.description;
         fn.description_localizations = args.description_localizations;
@@ -89,6 +92,10 @@ class Client<T extends Env, C extends object> {
       | APIApplicationCommandAutocompleteInteraction
       | APIMessageComponentInteraction
       | APIModalSubmitInteraction;
+    if (this.ignoreList.find((x) => x === interaction.user?.id))
+      return respond({
+        type: InteractionResponseType.Pong,
+      });
     switch (interaction.type) {
       case InteractionType.Ping:
         return respond({
