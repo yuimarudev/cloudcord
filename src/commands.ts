@@ -22,17 +22,8 @@ class Commands<T extends Env, C extends object> {
     let i = this.client.commandFunctions.map((v, k) => {
       return { name: k, ...v };
     });
-    return await fetch(
-      `https://discord.com/api/v10/applications/${this.clientId}/commands`,
-      {
-        method: "PUT",
-        headers: {
-          "content-type": "application/json",
-          Authorization: `Bot ${this.token}`,
-        },
-        body: JSON.stringify(i),
-      }
-    )
+    return await this.client
+      .put(`applications/${this.clientId}/commands`, i)
       .then(async (r) => await r.json())
       .catch((e) => e);
   }

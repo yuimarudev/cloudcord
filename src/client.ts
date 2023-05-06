@@ -79,7 +79,7 @@ class Client<T extends Env, C extends object> {
     };
   }
 
-  async request(request: Request): Promise<Response> {
+  async handleRequest(request: Request): Promise<Response> {
     if (
       !request.headers.get("X-Signature-Ed25519") ||
       !request.headers.get("X-Signature-Timestamp") ||
@@ -151,10 +151,10 @@ class Client<T extends Env, C extends object> {
     return this.post(
       "channels/" + channel + "/messages",
       form
-    ) as Promise<APIMessage>;
+    ).then(async r => await r.json()) as Promise<APIMessage>;
   }
 
-  async post(route: string, data: FormData | object | string): Promise<Object> {
+  async post(route: string, data: FormData | object | string): Promise<Response> {
     let json = false;
     if (!(data instanceof FormData)) {
       data = JSON.stringify(data);
@@ -167,22 +167,41 @@ class Client<T extends Env, C extends object> {
         Authorization: "Bot " + this.env.token,
         ...(json ? { "Content-Type": "application/json" } : {}),
       },
-    }).then(async (r) => r.json());
+    });
   }
-  async delete(route: string): Promise<Object> {
+  async put(route: string, data?: FormData | object | string): Promise<Response> {
+    let json = false;
+    if (!(data instanceof FormData) && typeof data !== "undefined") {
+      data = JSON.stringify(data);
+      json = true;
+    }
+    return fetch("https://discord.com/api/v10/" + route, {
+      method: "PUT",
+      body: data,
+      headers: {
+        Authorization: "Bot " + this.env.token,
+        ...(json ? { "Content-Type": "application/json" } : {}),
+      },
+    });
+  }
+  async delete(route: string): Promise<Response> {
     return fetch("https://discord.com/api/v10/" + route, {
       method: "DELETE",
       headers: {
         Authorization: "Bot " + this.env.token,
       },
-    }).then(async (r) => r.json());
+    });
   }
-  async get(route: string): Promise<Object> {
+  async get(route: string): Promise<Response> {
     return fetch("https://discord.com/api/v10/" + route, {
       headers: {
         Authorization: "Bot " + this.env.token,
       },
-    }).then(async (r) => r.json());
+    });
+  }
+  async request(request: Request): Promise<Response> {
+    request.headers.append("Authorization", "Bot " + this.env.token);
+    return fetch("https://discord.com/api/v10/" + request.url, request);
   }
 }
 
